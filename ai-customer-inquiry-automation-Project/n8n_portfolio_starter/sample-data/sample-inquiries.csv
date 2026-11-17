@@ -1,0 +1,4 @@
+Timestamp,Customer Name,Email Address,Inquiry Type,Your Message
+2026-11-10 10:15:00,Sample Customer A,customer-a@example.com,Delivery Issue,My parcel has not arrived. Could you check the status?
+2026-11-10 10:20:00,Sample Customer B,customer-b@example.com,Return-Refund,I received a different size. How can I request an exchange?
+2026-11-10 10:25:00,Sample Customer C,customer-c@example.com,General Inquiry,Could you tell me how to check product availability?

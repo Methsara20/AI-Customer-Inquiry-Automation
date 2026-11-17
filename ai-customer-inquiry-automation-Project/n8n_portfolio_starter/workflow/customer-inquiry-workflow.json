@@ -1,0 +1,1440 @@
+{
+  "name": "AI Customer Inquiry - Google Form Automation copy",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\nYou are an AI Customer Support Classification and Response Assistant.\n\nCustomer Details:\nName: {{ $('If row does not exist').item.json.customer_name }}\nEmail: {{ $('If row does not exist').item.json.email }}\nSelected Inquiry Type: {{ $('If row does not exist').item.json.inquiry_type }}\nMessage: {{ $('If row does not exist').item.json.message }}\nInquiry ID: {{ $('If row does not exist').item.json.inquiry_id }}\n\nTASKS:\n1. Classify the inquiry into ORDER, DELIVERY, RETURN, COMPLAINT, or GENERAL.\n2. Assign priority HIGH, MEDIUM, or LOW.\n3. Summarize the issue in one sentence.\n4. Draft a professional, friendly customer response.\n\nPRIORITY RULES:\nHIGH: Urgent complaints, repeated unresolved issues, serious service failures.\nMEDIUM: Returns, exchanges, standard requests requiring employee action.\nLOW: General information requests.\n\nIMPORTANT BUSINESS RULES:\n- Do not invent company policies.\n- Do not promise refunds, exchanges, delivery dates, or prepaid return labels.\n- Do not claim an issue has already been escalated.\n- Do not claim an employee has taken action.\n- If policy details are unknown, say the support team will review the request.\n- All responses are drafts requiring human approval.\n- Do not include unverified company names or commitments.\n- Personalize the response using the customer's name.\n- Keep the response concise, clear, and professional.\n\nReturn ONLY valid JSON:\n\n{\n  \"category\": \"RETURN\",\n  \"priority\": \"MEDIUM\",\n  \"summary\": \"Customer requests a size exchange.\",\n  \"suggested_reply\": \"Dear Customer, thank you for contacting us. Our support team will review your exchange request and provide guidance on the available options.\"\n}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "ea963d58-da50-4042-990b-e4ad57253a2d",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 2
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        864,
+        240
+      ],
+      "id": "4f4ee60c-9b3b-4e03-8cb2-434d42d0d05d",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "awe9dJNBrGbaZ9O9",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\n\nreturn items.map((item, index) => {\n  // Find the original validated inquiry using item linking.\n  let source;\n\n  try {\n    source = $('Validate Customer Inquiry')\n      .itemMatching(index).json;\n  } catch (error) {\n    throw new Error(\n      `Cannot match AI result ${index} to its original inquiry. ` +\n      `Check item linking in the AI Agent and Insert row nodes.`\n    );\n  }\n\n  const raw = item.json.output;\n\n  let ai;\n\n  try {\n    ai = typeof raw === 'string'\n      ? JSON.parse(\n          raw.replace(/```(?:json)?|```/g, '').trim()\n        )\n      : raw;\n\n    const validCategories = [\n      'ORDER', 'DELIVERY', 'RETURN',\n      'COMPLAINT', 'GENERAL'\n    ];\n\n    const validPriorities = ['HIGH', 'MEDIUM', 'LOW'];\n\n    if (\n      !ai ||\n      !validCategories.includes(ai.category) ||\n      !validPriorities.includes(ai.priority) ||\n      typeof ai.summary !== 'string' ||\n      typeof ai.suggested_reply !== 'string' ||\n      !ai.summary.trim() ||\n      !ai.suggested_reply.trim()\n    ) {\n      throw new Error('Invalid AI response');\n    }\n\n  } catch (error) {\n    ai = {\n      category: 'GENERAL',\n      priority: 'HIGH',\n      summary: 'AI output requires manual review',\n      suggested_reply: '',\n      processing_error: error.message\n    };\n  }\n\n  return {\n    json: {\n      inquiry_id: source.inquiry_id,\n      customer_name: source.customer_name,\n      email: source.email,\n      message: source.message,\n      inquiry_type: source.inquiry_type,\n      submitted_at: source.submitted_at,\n\n      category: ai.category,\n      priority: ai.priority,\n      summary: ai.summary,\n      suggested_reply: ai.suggested_reply,\n\n      status: ai.processing_error\n        ? 'Manual Review Required'\n        : 'Pending Review',\n\n      processed_at: new Date().toISOString(),\n\n      ...(ai.processing_error\n        ? { processing_error: ai.processing_error }\n        : {})\n    },\n    pairedItem: index\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "aec476cd-e5a1-4369-b86f-db2d27186749",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1xIsOzpjNi43RIZT3y_L0xKgwxyVZVbGq7n6ULACU4kI",
+          "mode": "list",
+          "cachedResultName": "AI Customer Inquiry Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xIsOzpjNi43RIZT3y_L0xKgwxyVZVbGq7n6ULACU4kI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xIsOzpjNi43RIZT3y_L0xKgwxyVZVbGq7n6ULACU4kI/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Inquiry_ID": "={{ $json.inquiry_id }}",
+            "Received_At": "={{ $json.submitted_at }}",
+            "Customer_Name": "={{ $json.customer_name }}",
+            "Email": "={{ $json.email }}",
+            "Message": "={{ $json.message }}",
+            "Category": "={{ $json.category }}",
+            "Priority": "={{ $json.priority }}",
+            "Summary": "={{ $json.summary }}",
+            "Suggested_Reply": "={{ $json.suggested_reply }}",
+            "Status": "={{ $json.status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Inquiry_ID",
+              "displayName": "Inquiry_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Received_At",
+              "displayName": "Received_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Name",
+              "displayName": "Customer_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Suggested_Reply",
+              "displayName": "Suggested_Reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1488,
+        0
+      ],
+      "id": "d7fea7da-791d-479b-a77f-58d00e6294b8",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WMvQca0SYt4BGvMJ",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1tndtP4Xy7kqqUotWoiwdnqKztG4TTqIM-y2ZViJbuHA",
+          "mode": "list",
+          "cachedResultName": "Customer Form Responses",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1tndtP4Xy7kqqUotWoiwdnqKztG4TTqIM-y2ZViJbuHA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1516523722,
+          "mode": "list",
+          "cachedResultName": "Form responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1tndtP4Xy7kqqUotWoiwdnqKztG4TTqIM-y2ZViJbuHA/edit#gid=1516523722"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "8dd8266c-ffe3-406b-b542-a88489a7e21d",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "OcJa6L8HH6GaQX3z",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "HIGH",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6cb5376b-01ce-434b-a016-c1810bee28d0"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "HIGH - Urgent"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "39f29daa-072c-45d3-beac-341866a127d0",
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "MEDIUM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "MEDIUM - Review"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "4ff3fc89-c318-41c1-9388-5fda07429609",
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "LOW",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "LOW - General"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        2160,
+        0
+      ],
+      "id": "104db428-8f3b-42e8-ae4b-6d2c40018783",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\n\nreturn items.map((item) => {\n  // Normalize incoming Google Sheets column names\n  const data = Object.fromEntries(\n    Object.entries(item.json).map(([key, value]) => [\n      key.trim(),\n      value\n    ])\n  );\n\n  const customerName = String(data['Customer Name'] ?? '').trim();\n  const email = String(data['Email Address'] ?? '').trim().toLowerCase();\n  const inquiryType = String(data['Inquiry Type'] ?? '').trim();\n  const message = String(data['Your Message'] ?? '').trim();\n  const timestamp = String(data['Timestamp'] ?? '').trim();\n\n  const errors = [];\n\n  if (!customerName) {\n    errors.push('Missing customer name');\n  }\n\n  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {\n    errors.push('Invalid email address');\n  }\n\n  if (!message) {\n    errors.push('Missing customer message');\n  }\n\n  if (!timestamp) {\n    errors.push('Missing submission timestamp');\n  }\n\n  const source = JSON.stringify([\n    timestamp,\n    email,\n    customerName,\n    inquiryType,\n    message\n  ]);\n\n  let h1 = 0x811c9dc5;\n  let h2 = 0x811c9dc5;\n\n  for (let i = 0; i < source.length; i++) {\n    const c = source.charCodeAt(i);\n\n    h1 = Math.imul(h1 ^ c, 0x01000193);\n    h2 = Math.imul(h2 ^ (c + i), 0x01000193);\n  }\n\n  const id = [h1, h2]\n    .map(h => (h >>> 0).toString(16).padStart(8, '0'))\n    .join('')\n    .toUpperCase();\n\n  return {\n    json: {\n      ...data,\n      inquiry_id: `INQ-${id}`,\n      customer_name: customerName,\n      email,\n      inquiry_type: inquiryType,\n      message,\n      submitted_at: timestamp,\n      validation_status: errors.length ? 'INVALID' : 'VALID',\n      validation_errors: errors\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        0
+      ],
+      "id": "26cb2a43-a5d3-4a6a-aaaa-37f23e606386",
+      "name": "Validate Customer Inquiry"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "ed5edb73-55b2-4537-b457-a371394f638a",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "VALID",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        384,
+        0
+      ],
+      "id": "3c10218f-5a2a-41e6-809b-97c3fbc81385",
+      "name": "Check Input Validation"
+    },
+    {
+      "parameters": {
+        "operation": "rowExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_id",
+              "keyValue": "={{ $json.inquiry_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        -256
+      ],
+      "id": "b5bc4275-df14-4e45-ba1e-4ba42a4fcc10",
+      "name": "Check Existing Inquiry",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_id",
+              "keyValue": "={{ $json.inquiry_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        544,
+        -272
+      ],
+      "id": "b7f27efe-341a-49a9-b799-da359becd362",
+      "name": "If row does not exist"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "inquiry_id": "={{ $json.inquiry_id }}",
+            "customer_email": "={{ $json.email }}",
+            "processing_status": "PROCESSING",
+            "notification_status": "NOT_SENT"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "inquiry_id",
+              "displayName": "inquiry_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "processing_status",
+              "displayName": "processing_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "notification_status",
+              "displayName": "notification_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        -80
+      ],
+      "id": "d93fa63b-e38d-4d5f-a98b-cc91847a41e5",
+      "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_id",
+              "keyValue": "={{ $('If row does not exist').item.json.inquiry_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "processing_status": "COMPLETED"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "inquiry_id",
+              "displayName": "inquiry_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "processing_status",
+              "displayName": "processing_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "notification_status",
+              "displayName": "notification_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        0
+      ],
+      "id": "049741fa-6e56-4986-91f5-c555355f08e7",
+      "name": "Mark Inquiry Processed"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst registryItems = $input.all();\nconst classifiedItems = $('Code in JavaScript').all();\n\nconst inquiryMap = new Map();\n\nfor (const item of classifiedItems) {\n  const data = item.json;\n\n  if (!data.inquiry_id) {\n    throw new Error('Missing inquiry_id in AI output');\n  }\n\n  inquiryMap.set(data.inquiry_id, data);\n}\n\nreturn registryItems.map((item, index) => {\n  const registry = item.json;\n  const original = inquiryMap.get(registry.inquiry_id);\n\n  if (!original) {\n    throw new Error(\n      `No matching AI data for ${registry.inquiry_id}`\n    );\n  }\n\n  return {\n    json: {\n      ...original,\n      registry_id: registry.id,\n      processing_status: registry.processing_status,\n      notification_status: registry.notification_status\n    },\n    pairedItem: index\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1936,
+        0
+      ],
+      "id": "5c8c10c2-b853-4e46-a612-c6239adeea4d",
+      "name": "Restore Inquiry Data"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_id",
+              "keyValue": "={{ $('Restore Inquiry Data').item.json.inquiry_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "notification_status": "SENT"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "inquiry_id",
+              "displayName": "inquiry_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "processing_status",
+              "displayName": "processing_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "notification_status",
+              "displayName": "notification_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3488,
+        16
+      ],
+      "id": "9c12ac7c-791e-41d2-b11e-7950289aa09f",
+      "name": "Mark Notification Sent - MEDIUM"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_id",
+              "keyValue": "={{ $('Restore Inquiry Data').item.json.inquiry_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "notification_status": "SENT"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "inquiry_id",
+              "displayName": "inquiry_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "processing_status",
+              "displayName": "processing_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "notification_status",
+              "displayName": "notification_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3264,
+        -448
+      ],
+      "id": "c121476c-c0b2-4d45-915a-895a14a7313a",
+      "name": "Mark Notification Sent - HIGH"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_id",
+              "keyValue": "={{ $('Restore Inquiry Data').item.json.inquiry_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "notification_status": "SENT"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "inquiry_id",
+              "displayName": "inquiry_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "processing_status",
+              "displayName": "processing_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "notification_status",
+              "displayName": "notification_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3520,
+        288
+      ],
+      "id": "25ff2f50-b641-4831-ae1d-959fa62e5965",
+      "name": "Mark Notification Sent - LOW"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_id",
+              "keyValue": "={{ $json.inquiry_id }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2416,
+        -16
+      ],
+      "id": "213dbaec-3f77-48f7-95c7-f6b891aa556c",
+      "name": "Check Notification Status - MEDIUM"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "4b581ca0-8e3f-40f2-bb1c-b88088fd2f74",
+              "leftValue": "={{ $json.notification_status }}",
+              "rightValue": "NOT_SENT",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        2656,
+        16
+      ],
+      "id": "36fe490d-438d-4551-a90b-40be1c311521",
+      "name": "Notification Not Sent? - MEDIUM"
+    },
+    {
+      "parameters": {
+        "sendTo": "dimalsham00@gmail.com",
+        "subject": "=Customer Inquiry - {{ $json.priority }} - {{ $json.inquiry_id }}",
+        "message": "=\n{{ (() => {\n  const d = $json;\n\n  const escapeHtml = (value) => String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n\n  const safe = (value) =>\n    escapeHtml(value).replace(/\\r?\\n/g, '<br>');\n\n  const priority = String(d.priority ?? '').toUpperCase();\n\n  if (!['HIGH', 'MEDIUM', 'LOW'].includes(priority)) {\n    throw new Error('Missing or invalid inquiry priority');\n  }\n\n  const requiredFields = [\n    'inquiry_id', 'customer_name', 'email',\n    'message', 'category', 'summary',\n    'status'\n  ];\n\n  for (const field of requiredFields) {\n    if (!String(d[field] ?? '').trim()) {\n      throw new Error(`Missing email field: ${field}`);\n    }\n  }\n\n  const priorityColor =\n    priority === 'HIGH' ? '#B42318' :\n    priority === 'MEDIUM' ? '#B54708' : '#027A48';\n\n  const title =\n    priority === 'HIGH' ? 'Urgent Customer Inquiry' :\n    priority === 'MEDIUM' ? 'Customer Inquiry - Review Required' :\n    'General Customer Inquiry';\n\n  const actionText =\n    priority === 'HIGH'\n      ? 'URGENT: Review and prioritize this inquiry. Verify the customer details and approve or edit the AI-generated response before contacting the customer.'\n      : priority === 'MEDIUM'\n      ? 'Review this inquiry, verify the details, and approve or edit the AI-generated response before contacting the customer.'\n      : 'Review this general inquiry and approve or edit the suggested response before contacting the customer.';\n\n  return `\n<div style=\"margin:0;padding:28px 12px;background:#f3f5f9;font-family:Arial,Helvetica,sans-serif;color:#253247;\">\n  <div style=\"max-width:650px;margin:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;\">\n\n    <div style=\"background:#14243a;padding:26px 30px;color:#ffffff;\">\n      <div style=\"font-size:12px;letter-spacing:2px;color:#c7d5e5;\">\n        CUSTOMER SUPPORT AUTOMATION\n      </div>\n      <h1 style=\"font-size:23px;margin:12px 0;color:#ffffff;\">\n        ${title}\n      </h1>\n      <span style=\"display:inline-block;background:${priorityColor};color:#ffffff;padding:7px 12px;border-radius:5px;font-size:12px;font-weight:bold;\">\n        ${safe(priority)} PRIORITY\n      </span>\n    </div>\n\n    <div style=\"padding:28px 30px;\">\n\n      <p style=\"font-size:13px;color:#667085;\">\n        Inquiry Reference\n      </p>\n      <p style=\"font-size:17px;font-weight:bold;margin-top:0;\">\n        ${safe(d.inquiry_id)}\n      </p>\n\n      <table style=\"width:100%;border-collapse:collapse;font-size:14px;\">\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Customer Name</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">${safe(d.customer_name)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Inquiry Type</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">${safe(d.inquiry_type)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Category</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">${safe(d.category)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Priority</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;color:${priorityColor};font-weight:bold;\">${safe(priority)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Customer Email</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;word-break:break-word;\">${safe(d.email)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;\"><b>Status</b></td>\n          <td style=\"padding:12px;\">${safe(d.status)}</td>\n        </tr>\n      </table>\n\n      <h2 style=\"font-size:16px;margin-top:30px;\">\n        Customer Message\n      </h2>\n      <div style=\"background:#f5f7fb;padding:16px;border-radius:7px;font-size:14px;line-height:1.7;\">\n        ${safe(d.message)}\n      </div>\n\n      <h2 style=\"font-size:16px;margin-top:28px;\">\n        AI Analysis\n      </h2>\n      <p style=\"font-size:14px;line-height:1.7;\">\n        ${safe(d.summary)}\n      </p>\n\n      <h2 style=\"font-size:16px;margin-top:28px;\">\n        AI Suggested Response\n      </h2>\n      <div style=\"border:1px solid #dbe3ec;border-left:4px solid #2563eb;border-radius:6px;padding:18px;font-size:14px;line-height:1.8;\">\n        ${safe(d.suggested_reply || 'Manual response required.')}\n      </div>\n\n      <div style=\"background:#fff4e5;border-left:4px solid #e59b22;padding:17px;margin-top:28px;border-radius:5px;\">\n        <b style=\"color:#92400e;\">ACTION REQUIRED</b>\n        <p style=\"font-size:14px;line-height:1.6;margin-bottom:0;\">\n          ${actionText}\n        </p>\n      </div>\n\n    </div>\n\n    <div style=\"background:#f8fafc;text-align:center;padding:20px;color:#667085;font-size:12px;line-height:1.7;\">\n      Generated by n8n + Groq AI<br>\n      Internal support notification — not sent to the customer\n    </div>\n\n  </div>\n</div>`;\n})() }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3040,
+        -448
+      ],
+      "id": "eda60e93-e7b2-49c3-8dda-9fabe8bb1a36",
+      "name": "Send a message - HIGH",
+      "webhookId": "27316daa-d251-43a0-81ff-e5c2fc036849",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DjkLN23kqxtNwd4E",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "dimalsham00@gmail.com",
+        "subject": "=Customer Inquiry - {{ $json.priority }} - {{ $json.inquiry_id }}",
+        "message": "=\n{{ (() => {\n  const d = $json;\n\n  const escapeHtml = (value) => String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n\n  const safe = (value) =>\n    escapeHtml(value).replace(/\\r?\\n/g, '<br>');\n\n  const priority = String(d.priority ?? 'MEDIUM').toUpperCase();\n\n  const priorityColor =\n    priority === 'HIGH' ? '#B42318' :\n    priority === 'MEDIUM' ? '#B54708' : '#027A48';\n\n  const title =\n    priority === 'HIGH' ? 'Urgent Customer Inquiry' :\n    priority === 'MEDIUM' ? 'Customer Inquiry - Review Required' :\n    'General Customer Inquiry';\n\n  const actionText =\n    priority === 'HIGH'\n      ? 'Review this urgent inquiry as soon as possible. Verify the details and approve or edit the AI-generated response.'\n      : priority === 'MEDIUM'\n      ? 'Review this inquiry, verify the customer details, and approve or edit the AI-generated response before contacting the customer.'\n      : 'Review this general inquiry and approve or edit the suggested response before contacting the customer.';\n\n  return `\n<div style=\"margin:0;padding:28px 12px;background:#f3f5f9;font-family:Arial,Helvetica,sans-serif;color:#253247;\">\n  <div style=\"max-width:650px;margin:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;\">\n\n    <div style=\"background:#14243a;padding:26px 30px;color:#ffffff;\">\n      <div style=\"font-size:12px;letter-spacing:2px;color:#c7d5e5;\">\n        CUSTOMER SUPPORT AUTOMATION\n      </div>\n      <h1 style=\"font-size:23px;margin:12px 0;color:#ffffff;\">\n        ${title}\n      </h1>\n      <span style=\"display:inline-block;background:${priorityColor};color:white;padding:7px 12px;border-radius:5px;font-size:12px;font-weight:bold;\">\n        ${safe(priority)} PRIORITY\n      </span>\n    </div>\n\n    <div style=\"padding:28px 30px;\">\n\n      <p style=\"font-size:13px;color:#667085;\">\n        Inquiry Reference\n      </p>\n      <p style=\"font-size:17px;font-weight:bold;margin-top:0;\">\n        ${safe(d.inquiry_id)}\n      </p>\n\n      <table style=\"width:100%;border-collapse:collapse;font-size:14px;\">\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Customer Name</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">${safe(d.customer_name)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Category</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">${safe(d.category)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Priority</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;color:${priorityColor};font-weight:bold;\">${safe(priority)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Inquiry Type</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">${safe(d.inquiry_type)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Customer Email</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;word-break:break-word;\">${safe(d.email)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;\"><b>Status</b></td>\n          <td style=\"padding:12px;\">${safe(d.status)}</td>\n        </tr>\n      </table>\n\n      <h2 style=\"font-size:16px;margin-top:30px;\">\n        Customer Message\n      </h2>\n      <div style=\"background:#f5f7fb;padding:16px;border-radius:7px;font-size:14px;line-height:1.7;\">\n        ${safe(d.message)}\n      </div>\n\n      <h2 style=\"font-size:16px;margin-top:28px;\">\n        AI Analysis\n      </h2>\n      <p style=\"font-size:14px;line-height:1.7;\">\n        ${safe(d.summary)}\n      </p>\n\n      <h2 style=\"font-size:16px;margin-top:28px;\">\n        AI Suggested Response\n      </h2>\n      <div style=\"border:1px solid #dbe3ec;border-left:4px solid #2563eb;border-radius:6px;padding:18px;font-size:14px;line-height:1.8;\">\n        ${safe(d.suggested_reply)}\n      </div>\n\n      <div style=\"background:#fff4e5;border-left:4px solid #e59b22;padding:17px;margin-top:28px;border-radius:5px;\">\n        <b style=\"color:#92400e;\">ACTION REQUIRED</b>\n        <p style=\"font-size:14px;line-height:1.6;margin-bottom:0;\">\n          ${actionText}\n        </p>\n      </div>\n\n    </div>\n\n    <div style=\"background:#f8fafc;text-align:center;padding:20px;color:#667085;font-size:12px;line-height:1.7;\">\n      Generated by n8n + Groq AI<br>\n      Internal support notification — not sent to the customer\n    </div>\n\n  </div>\n</div>`;\n})() }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3168,
+        -16
+      ],
+      "id": "f8b785cc-0725-4598-820e-78b59964a962",
+      "name": "Send a message - MEDIUM",
+      "webhookId": "25e32be0-c580-4949-b25d-1e97c8d1af3a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DjkLN23kqxtNwd4E",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "dimalsham00@gmail.com",
+        "subject": "=Customer Inquiry - {{ $json.priority }} - {{ $json.inquiry_id }}",
+        "message": "=\n{{ (() => {\n  const d = $json;\n\n  const escapeHtml = (value) => String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n\n  const safe = (value) =>\n    escapeHtml(value).replace(/\\r?\\n/g, '<br>');\n\n  const priority = String(d.priority ?? '').toUpperCase();\n\n  if (!['HIGH', 'MEDIUM', 'LOW'].includes(priority)) {\n    throw new Error('Missing or invalid inquiry priority');\n  }\n\n  const requiredFields = [\n    'inquiry_id', 'customer_name', 'email',\n    'message', 'category', 'summary',\n    'status'\n  ];\n\n  for (const field of requiredFields) {\n    if (!String(d[field] ?? '').trim()) {\n      throw new Error(`Missing email field: ${field}`);\n    }\n  }\n\n  const priorityColor =\n    priority === 'HIGH' ? '#B42318' :\n    priority === 'MEDIUM' ? '#B54708' : '#027A48';\n\n  const title =\n    priority === 'HIGH' ? 'Urgent Customer Inquiry' :\n    priority === 'MEDIUM' ? 'Customer Inquiry - Review Required' :\n    'General Customer Inquiry';\n\n  const actionText =\n    priority === 'HIGH'\n      ? 'URGENT: Review and prioritize this inquiry. Verify the customer details and approve or edit the AI-generated response before contacting the customer.'\n      : priority === 'MEDIUM'\n      ? 'Review this inquiry, verify the details, and approve or edit the AI-generated response before contacting the customer.'\n      : 'Review this general inquiry and approve or edit the suggested response before contacting the customer.';\n\n  return `\n<div style=\"margin:0;padding:28px 12px;background:#f3f5f9;font-family:Arial,Helvetica,sans-serif;color:#253247;\">\n  <div style=\"max-width:650px;margin:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;\">\n\n    <div style=\"background:#14243a;padding:26px 30px;color:#ffffff;\">\n      <div style=\"font-size:12px;letter-spacing:2px;color:#c7d5e5;\">\n        CUSTOMER SUPPORT AUTOMATION\n      </div>\n      <h1 style=\"font-size:23px;margin:12px 0;color:#ffffff;\">\n        ${title}\n      </h1>\n      <span style=\"display:inline-block;background:${priorityColor};color:#ffffff;padding:7px 12px;border-radius:5px;font-size:12px;font-weight:bold;\">\n        ${safe(priority)} PRIORITY\n      </span>\n    </div>\n\n    <div style=\"padding:28px 30px;\">\n\n      <p style=\"font-size:13px;color:#667085;\">\n        Inquiry Reference\n      </p>\n      <p style=\"font-size:17px;font-weight:bold;margin-top:0;\">\n        ${safe(d.inquiry_id)}\n      </p>\n\n      <table style=\"width:100%;border-collapse:collapse;font-size:14px;\">\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Customer Name</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">${safe(d.customer_name)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Inquiry Type</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">${safe(d.inquiry_type)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Category</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">${safe(d.category)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Priority</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;color:${priorityColor};font-weight:bold;\">${safe(priority)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;\"><b>Customer Email</b></td>\n          <td style=\"padding:12px;border-bottom:1px solid #e5e7eb;word-break:break-word;\">${safe(d.email)}</td>\n        </tr>\n        <tr>\n          <td style=\"padding:12px;background:#f8fafc;\"><b>Status</b></td>\n          <td style=\"padding:12px;\">${safe(d.status)}</td>\n        </tr>\n      </table>\n\n      <h2 style=\"font-size:16px;margin-top:30px;\">\n        Customer Message\n      </h2>\n      <div style=\"background:#f5f7fb;padding:16px;border-radius:7px;font-size:14px;line-height:1.7;\">\n        ${safe(d.message)}\n      </div>\n\n      <h2 style=\"font-size:16px;margin-top:28px;\">\n        AI Analysis\n      </h2>\n      <p style=\"font-size:14px;line-height:1.7;\">\n        ${safe(d.summary)}\n      </p>\n\n      <h2 style=\"font-size:16px;margin-top:28px;\">\n        AI Suggested Response\n      </h2>\n      <div style=\"border:1px solid #dbe3ec;border-left:4px solid #2563eb;border-radius:6px;padding:18px;font-size:14px;line-height:1.8;\">\n        ${safe(d.suggested_reply || 'Manual response required.')}\n      </div>\n\n      <div style=\"background:#fff4e5;border-left:4px solid #e59b22;padding:17px;margin-top:28px;border-radius:5px;\">\n        <b style=\"color:#92400e;\">ACTION REQUIRED</b>\n        <p style=\"font-size:14px;line-height:1.6;margin-bottom:0;\">\n          ${actionText}\n        </p>\n      </div>\n\n    </div>\n\n    <div style=\"background:#f8fafc;text-align:center;padding:20px;color:#667085;font-size:12px;line-height:1.7;\">\n      Generated by n8n + Groq AI<br>\n      Internal support notification — not sent to the customer\n    </div>\n\n  </div>\n</div>`;\n})() }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3248,
+        304
+      ],
+      "id": "46a6d2ba-ec7c-4206-b50d-d2293ee2a725",
+      "name": "Send a message - LOW",
+      "webhookId": "020c709f-8a63-41f4-a2c5-489bb88354ec",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DjkLN23kqxtNwd4E",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_id",
+              "keyValue": "={{ $json.inquiry_id }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2384,
+        -256
+      ],
+      "id": "da2044d8-32ff-4f02-86fc-3c78ed206a50",
+      "name": "Check Notification Status - HIGH"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "4b581ca0-8e3f-40f2-bb1c-b88088fd2f74",
+              "leftValue": "={{ $json.notification_status }}",
+              "rightValue": "NOT_SENT",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        2544,
+        -432
+      ],
+      "id": "f418dc48-5cde-4f78-bca0-ee63fe6f7283",
+      "name": "Notification Not Sent? - HIGH"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst registryItems = $input.all();\n\nconst originalItems = $('Restore Inquiry Data').all();\n\nconst inquiryMap = new Map(\n  originalItems.map(item => [\n    item.json.inquiry_id,\n    item.json\n  ])\n);\n\nreturn registryItems.map((item, index) => {\n  const registry = item.json;\n\n  const original = inquiryMap.get(\n    registry.inquiry_id\n  );\n\n  if (!original) {\n    throw new Error(\n      `Original inquiry data not found: ${registry.inquiry_id}`\n    );\n  }\n\n  return {\n    json: {\n      ...original,\n      notification_status: registry.notification_status,\n      registry_id: registry.id\n    },\n    pairedItem: index\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        -464
+      ],
+      "id": "957911ec-0a37-4bca-9a90-76c75b9d3241",
+      "name": "Code in JavaScript - HIGH"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst registryItems = $input.all();\n\nconst originalItems = $('Restore Inquiry Data').all();\n\nconst inquiryMap = new Map(\n  originalItems.map(item => [\n    item.json.inquiry_id,\n    item.json\n  ])\n);\n\nreturn registryItems.map((item, index) => {\n  const registry = item.json;\n\n  const original = inquiryMap.get(\n    registry.inquiry_id\n  );\n\n  if (!original) {\n    throw new Error(\n      `Original inquiry data not found: ${registry.inquiry_id}`\n    );\n  }\n\n  return {\n    json: {\n      ...original,\n      notification_status: registry.notification_status,\n      registry_id: registry.id\n    },\n    pairedItem: index\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        0
+      ],
+      "id": "7606b6b5-3060-49ee-8202-035a33515003",
+      "name": "Code in JavaScript - MEDIUM"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "QH74kOXClnTCdfcW",
+          "mode": "list",
+          "cachedResultName": "Customer_Inquiry_Registry",
+          "cachedResultUrl": "/projects/yBnRle0HEil7jcoQ/datatables/QH74kOXClnTCdfcW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_id",
+              "keyValue": "={{ $json.inquiry_id }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2368,
+        320
+      ],
+      "id": "0ee628ef-c894-4580-9774-8c8f3627e812",
+      "name": "Check Notification Status - LOW"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst registryItems = $input.all();\n\nconst originalItems = $('Restore Inquiry Data').all();\n\nconst inquiryMap = new Map(\n  originalItems.map(item => [\n    item.json.inquiry_id,\n    item.json\n  ])\n);\n\nreturn registryItems.map((item, index) => {\n  const registry = item.json;\n\n  const original = inquiryMap.get(\n    registry.inquiry_id\n  );\n\n  if (!original) {\n    throw new Error(\n      `Original inquiry data not found: ${registry.inquiry_id}`\n    );\n  }\n\n  return {\n    json: {\n      ...original,\n      notification_status: registry.notification_status,\n      registry_id: registry.id\n    },\n    pairedItem: index\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2976,
+        304
+      ],
+      "id": "46d834b7-9a25-48a3-88bf-365e38ebec5f",
+      "name": "Code in JavaScript - LOW"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "4b581ca0-8e3f-40f2-bb1c-b88088fd2f74",
+              "leftValue": "={{ $json.notification_status }}",
+              "rightValue": "NOT_SENT",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        2736,
+        320
+      ],
+      "id": "f68b0fd3-2cb9-4beb-81cd-505ad3db9b59",
+      "name": "Notification Not Sent? - LOW"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Customer Inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Mark Inquiry Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Check Notification Status - HIGH",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Notification Status - MEDIUM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Notification Status - LOW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Customer Inquiry": {
+      "main": [
+        [
+          {
+            "node": "Check Input Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Input Validation": {
+      "main": [
+        [
+          {
+            "node": "If row does not exist",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Check Existing Inquiry": {
+      "main": [
+        []
+      ]
+    },
+    "If row does not exist": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Inquiry Processed": {
+      "main": [
+        [
+          {
+            "node": "Restore Inquiry Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Inquiry Data": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Notification Status - MEDIUM": {
+      "main": [
+        [
+          {
+            "node": "Notification Not Sent? - MEDIUM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notification Not Sent? - MEDIUM": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript - MEDIUM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message - HIGH": {
+      "main": [
+        [
+          {
+            "node": "Mark Notification Sent - HIGH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message - MEDIUM": {
+      "main": [
+        [
+          {
+            "node": "Mark Notification Sent - MEDIUM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message - LOW": {
+      "main": [
+        [
+          {
+            "node": "Mark Notification Sent - LOW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Notification Status - HIGH": {
+      "main": [
+        [
+          {
+            "node": "Notification Not Sent? - HIGH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notification Not Sent? - HIGH": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript - HIGH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript - HIGH": {
+      "main": [
+        [
+          {
+            "node": "Send a message - HIGH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript - MEDIUM": {
+      "main": [
+        [
+          {
+            "node": "Send a message - MEDIUM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Notification Status - LOW": {
+      "main": [
+        [
+          {
+            "node": "Notification Not Sent? - LOW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notification Not Sent? - LOW": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript - LOW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript - LOW": {
+      "main": [
+        [
+          {
+            "node": "Send a message - LOW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8fdcdcff-3b25-411f-b322-0fe14fcc7b38",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "35389db26c8e2b914a4d566b6e3987ea3566936a37eb4ccb49f569f527bd91a7"
+  },
+  "nodeGroups": [],
+  "id": "PiCrZpbPzezNX9xh",
+  "tags": []
+}

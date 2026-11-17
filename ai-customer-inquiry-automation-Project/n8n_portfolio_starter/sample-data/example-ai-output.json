@@ -1,0 +1,10 @@
+{
+  "note": "Illustrative synthetic example, not an actual workflow execution log",
+  "inquiry_id": "INQ-SAMPLE001",
+  "customer_name": "Sample Customer A",
+  "category": "DELIVERY",
+  "priority": "MEDIUM",
+  "summary": "Customer requests an update about a delayed parcel.",
+  "suggested_reply": "Thank you for contacting us. Our team will review your delivery inquiry and follow up with an update.",
+  "status": "Pending Review"
+}
